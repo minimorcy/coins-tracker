@@ -1,0 +1,29 @@
+<c-row>
+  <c-col xs>
+    <c-card class="mb-4">
+      <c-card-header>
+        Crypto Prices
+      </c-card-header>
+      <c-card-body>
+        <table cTable>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Coin</th>
+              <th>Price</th>
+              <th>24h Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let crypto of cryptocurrencies; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td>{{ crypto.name }}</td>
+              <td>{{ crypto.lastPrice | currency }}</td>
+              <td>{{ +crypto.priceChangePercent / 100 | percent:'1.2-2' }} ({{ crypto.priceChange | currency }})</td>
+            </tr>
+          </tbody>
+        </table>
+      </c-card-body>
+    </c-card>
+  </c-col>
+</c-row>

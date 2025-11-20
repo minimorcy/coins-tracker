@@ -1,0 +1,28 @@
+<ng-container>
+  <c-container [fluid]="true" class="px-4">
+    <c-header-nav class="ms-auto ms-md-0">
+      <ng-container *ngTemplateOutlet="themeDropdown" />
+    </c-header-nav>
+  </c-container>
+</ng-container>
+
+<ng-template #themeDropdown>
+  <c-dropdown alignment="end" variant="nav-item">
+    <button [caret]="false" cDropdownToggle aria-label="Open theme picker">
+      <svg cIcon [name]="icons()" size="lg"></svg>
+    </button>
+    <div cDropdownMenu>
+      @for (mode of colorModes; track mode.name) {
+        <button
+          (click)="colorMode.set(mode.name)"
+          [active]="colorMode()===mode.name"
+          cDropdownItem
+          class="d-flex align-items-center"
+        >
+          <svg cIcon class="me-2" [name]="mode.icon" size="lg"></svg>
+          {{ mode.text }}
+        </button>
+      }
+    </div>
+  </c-dropdown>
+</ng-template>

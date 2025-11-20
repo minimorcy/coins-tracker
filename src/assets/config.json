@@ -1,0 +1,9 @@
+{
+  "cryptocurrencies": [
+    { "symbol": "BTCUSDT", "id": "bitcoin" },
+    { "symbol": "ETHUSDT", "id": "ethereum" },
+    { "symbol": "NEARUSDT", "id": "near" },
+    { "symbol": "HBARUSDT", "id": "hbar" },
+    { "symbol": "SUIUSDT", "id": "sui" }
+  ]
+}
