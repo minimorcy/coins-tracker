@@ -19,7 +19,12 @@
               <td>{{ i + 1 }}</td>
               <td>{{ crypto.name }}</td>
               <td>{{ crypto.lastPrice | currency }}</td>
-              <td>{{ +crypto.priceChangePercent / 100 | percent:'1.2-2' }} ({{ crypto.priceChange | currency }})</td>
+              <td
+                [ngClass]="{
+                    'green-text': +crypto.priceChangePercent >= 0,
+                    'red-text': +crypto.priceChangePercent < 0
+                }"
+                >{{ +crypto.priceChangePercent / 100 | percent:'1.2-2' }} ({{ crypto.priceChange | currency }})</td>
             </tr>
           </tbody>
         </table>

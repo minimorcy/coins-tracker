@@ -1,7 +1,15 @@
 :host {
-  .legend {
-    small {
-      font-size: x-small;
+    .legend {
+        small {
+        font-size: x-small;
+        }
     }
-  }
+
+    .green-text {
+        color: green;
+    }
+    
+    .red-text {
+        color: red;
+    }
 }
