@@ -2,7 +2,10 @@
   <c-col xs>
     <c-card class="mb-4">
       <c-card-header>
-        Crypto Prices
+        <div class="d-flex justify-content-between align-items-center">
+          Crypto Prices
+          <button cButton color="primary" (click)="refreshData()">Refresh</button>
+        </div>
       </c-card-header>
       <c-card-body>
         <table cTable>

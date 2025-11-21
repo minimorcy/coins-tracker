@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import {
+  ButtonDirective,
   CardBodyComponent,
   CardComponent,
   CardHeaderComponent,
@@ -18,9 +19,11 @@ export interface CryptoData {
 }
 
 @Component({
+  selector: 'app-dashboard',
   templateUrl: 'dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
-  imports: [CardComponent, CardBodyComponent, RowComponent, ColComponent, CardHeaderComponent, TableDirective, CommonModule]
+  standalone: true,
+  imports: [CardComponent, CardBodyComponent, RowComponent, ColComponent, CardHeaderComponent, TableDirective, CommonModule, ButtonDirective]
 })
 export class DashboardComponent implements OnInit {
 
@@ -31,6 +34,10 @@ export class DashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.refreshData();
+  }
+
+  refreshData(): void {
     this.cryptoService.getPrices().subscribe({
       next: data => {
         this.cryptocurrencies = data.map(([symbol, { lastPrice, priceChange, priceChangePercent }] : [string, any]) => ({
@@ -47,6 +54,4 @@ export class DashboardComponent implements OnInit {
       }
     });
   }
-
 }
-
