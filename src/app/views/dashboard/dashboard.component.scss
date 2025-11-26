@@ -1,15 +1,24 @@
 :host {
     .legend {
         small {
-        font-size: x-small;
+            font-size: x-small;
         }
     }
 
     .green-text {
         color: green;
     }
-    
+
     .red-text {
         color: red;
+    }
+
+    .clickable-row {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+
+        &:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
     }
 }
