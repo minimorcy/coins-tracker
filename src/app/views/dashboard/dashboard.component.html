@@ -19,18 +19,27 @@
     <c-card class="mb-4">
       <c-card-header>
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-          <div class="d-flex align-items-center flex-grow-1">
-            <span class="me-3 text-nowrap">Crypto Prices</span>
-            <div class="input-group me-3" style="max-width: 250px;">
+          <div class="d-flex align-items-center flex-grow-1 flex-wrap gap-3">
+            <span class="me-2 text-nowrap fw-bold">Crypto Prices</span>
+            
+            <!-- Search -->
+            <div class="input-group input-group-sm" style="max-width: 200px;">
               <span class="input-group-text">🔍</span>
-              <input type="text" class="form-control" placeholder="Search coin..." [(ngModel)]="searchTerm">
+              <input type="text" class="form-control" placeholder="Search..." [(ngModel)]="searchTerm">
             </div>
+
+            <!-- Add Coin -->
+            <div class="input-group input-group-sm" style="max-width: 200px;">
+              <input type="text" class="form-control" placeholder="Symbol (e.g. DOGE)" [(ngModel)]="newCoinSymbol" (keyup.enter)="addCoin()">
+              <button cButton color="success" size="sm" (click)="addCoin()" [disabled]="!newCoinSymbol">Add</button>
+            </div>
+
             <c-form-check switch class="mb-0">
               <input cFormCheckInput type="checkbox" [(ngModel)]="autoRefreshEnabled" (change)="toggleAutoRefresh()" id="autoRefreshSwitch"/>
-              <label cFormCheckLabel for="autoRefreshSwitch" class="small text-muted text-nowrap">Auto-refresh (30s)</label>
+              <label cFormCheckLabel for="autoRefreshSwitch" class="small text-muted text-nowrap">Auto-refresh</label>
             </c-form-check>
           </div>
-          <button cButton color="primary" (click)="refreshData()">Refresh</button>
+          <button cButton color="primary" size="sm" (click)="refreshData()">Refresh</button>
         </div>
       </c-card-header>
       <c-card-body>
@@ -44,6 +53,7 @@
               <th (click)="sort('dailyChangePercent')" class="sortable-header">Day Change (00:00) {{ getSortIcon('dailyChangePercent') }}</th>
               <th (click)="sort('holdings')" class="sortable-header" style="width: 150px;">Holdings {{ getSortIcon('holdings') }}</th>
               <th (click)="sort('value')" class="sortable-header">Value {{ getSortIcon('value') }}</th>
+              <th style="width: 50px;"></th>
             </tr>
           </thead>
           <tbody>
@@ -95,6 +105,11 @@
               </td>
               <td class="fw-bold">
                 {{ (crypto.value || 0) | currency }}
+              </td>
+              <td (click)="$event.stopPropagation()">
+                <button cButton color="danger" variant="ghost" size="sm" (click)="removeCoin(crypto, $event)" title="Remove coin">
+                  🗑️
+                </button>
               </td>
             </tr>
           </tbody>

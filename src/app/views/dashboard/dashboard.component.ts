@@ -15,6 +15,7 @@ import {
 import { ChartModalComponent } from './chart-modal/chart-modal.component';
 import { CryptoService } from '../../services/crypto.service';
 import { PortfolioService } from '../../services/portfolio.service';
+import { ConfigService } from '../../services/config.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -40,6 +41,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     private cryptoService = inject(CryptoService);
     private portfolioService = inject(PortfolioService);
+    private configService = inject(ConfigService);
     public cryptocurrencies: CryptoData[] = [];
     public totalPortfolioValue: number = 0;
 
@@ -52,6 +54,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     public chartModalVisible: boolean = false;
     public selectedCrypto: CryptoData | null = null;
 
+    // Add coin state
+    public newCoinSymbol: string = '';
+
     // Sorting and Filtering
     public searchTerm: string = '';
     public sortColumn: string = '';
@@ -61,8 +66,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     ngOnInit(): void {
+        // Initial load
         this.refreshData();
         this.startAutoRefresh();
+
+        // Subscribe to config changes to refresh data when list changes
+        this.configService.getConfig().subscribe(() => {
+            this.refreshData();
+        });
     }
 
     ngOnDestroy(): void {
@@ -171,6 +182,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     calculateTotalValue(): void {
         this.totalPortfolioValue = this.cryptocurrencies.reduce((acc, crypto) => acc + (crypto.value || 0), 0);
+    }
+
+    addCoin(): void {
+        if (this.newCoinSymbol && this.newCoinSymbol.trim()) {
+            this.configService.addCrypto(this.newCoinSymbol.trim());
+            this.newCoinSymbol = '';
+        }
+    }
+
+    removeCoin(crypto: CryptoData, event: Event): void {
+        event.stopPropagation();
+        if (confirm(`Are you sure you want to remove ${crypto.name}?`)) {
+            this.configService.removeCrypto(crypto.name);
+            // Also remove from portfolio if exists
+            this.portfolioService.updateHolding(crypto.name, 0);
+        }
     }
 
     get filteredCryptocurrencies(): CryptoData[] {

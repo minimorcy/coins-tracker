@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, forkJoin } from 'rxjs';
-import { switchMap, map, catchError } from 'rxjs';
-import { ConfigService } from './config.service';
+import { switchMap, map, catchError, take } from 'rxjs/operators';
+import { ConfigService, AppConfig } from './config.service';
 
 @Injectable({
     providedIn: 'root'
@@ -53,7 +53,8 @@ export class CryptoService {
 
     getPrices(): Observable<any> {
         return this.configService.getConfig().pipe(
-            switchMap(config => {
+            take(1),
+            switchMap((config: AppConfig) => {
                 const symbols = config.cryptocurrencies.map(crypto => `"${crypto.symbol}"`).join(',');
                 if (!symbols) {
                     return of({});
