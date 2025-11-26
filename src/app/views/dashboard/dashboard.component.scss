@@ -1,4 +1,10 @@
 :host {
+    // Modern color palette
+    $green-color: #10b981;
+    $red-color: #ef4444;
+    $green-bg: rgba(16, 185, 129, 0.1);
+    $red-bg: rgba(239, 68, 68, 0.1);
+
     .legend {
         small {
             font-size: x-small;
@@ -6,16 +12,105 @@
     }
 
     .green-text {
-        color: green;
+        color: $green-color;
+        font-weight: 600;
     }
 
     .red-text {
-        color: red;
+        color: $red-color;
+        font-weight: 600;
+    }
+
+    .arrow-icon {
+        display: inline-block;
+        width: 12px;
+        margin-right: 2px;
     }
 
     .clickable-row {
         cursor: pointer;
-        transition: background-color 0.2s ease;
+        transition: all 0.2s ease;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+        &:hover {
+            background-color: rgba(0, 0, 0, 0.03);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            z-index: 1;
+            position: relative;
+        }
+
+        td {
+            vertical-align: middle;
+            padding: 1rem 0.75rem;
+        }
+    }
+
+    // Badge styles
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.35em 0.65em;
+        border-radius: 6px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+
+        &.badge-hot {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #d97706;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        &.badge-rising {
+            background-color: $green-bg;
+            color: $green-color;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        &.badge-falling {
+            background-color: $red-bg;
+            color: $red-color;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        &.badge-cold {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: #2563eb;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+    }
+
+    // Portfolio styles
+    .holding-input {
+        background-color: transparent;
+        border: 1px solid transparent;
+        text-align: right;
+        transition: all 0.2s;
+
+        &:hover,
+        &:focus {
+            background-color: white;
+            border-color: #ced4da;
+        }
+
+        &::placeholder {
+            color: #adb5bd;
+            opacity: 0.5;
+        }
+    }
+
+    .has-holdings {
+        background-color: rgba(16, 185, 129, 0.02);
+
+        .holding-input {
+            font-weight: 600;
+            color: #212529;
+        }
+    }
+
+    .sortable-header {
+        cursor: pointer;
+        user-select: none;
 
         &:hover {
             background-color: rgba(0, 0, 0, 0.05);

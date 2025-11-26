@@ -1,43 +1,101 @@
+<c-row class="mb-4">
+  <c-col xs>
+    <c-card class="bg-primary text-white">
+      <c-card-body class="d-flex justify-content-between align-items-center">
+        <div>
+          <h4 class="mb-0">Total Portfolio Value</h4>
+          <small>Real-time valuation based on your holdings</small>
+        </div>
+        <div class="text-end">
+          <h2 class="mb-0">{{ totalPortfolioValue | currency }}</h2>
+        </div>
+      </c-card-body>
+    </c-card>
+  </c-col>
+</c-row>
+
 <c-row>
   <c-col xs>
     <c-card class="mb-4">
       <c-card-header>
-        <div class="d-flex justify-content-between align-items-center">
-          Crypto Prices
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+          <div class="d-flex align-items-center flex-grow-1">
+            <span class="me-3 text-nowrap">Crypto Prices</span>
+            <div class="input-group me-3" style="max-width: 250px;">
+              <span class="input-group-text">🔍</span>
+              <input type="text" class="form-control" placeholder="Search coin..." [(ngModel)]="searchTerm">
+            </div>
+            <c-form-check switch class="mb-0">
+              <input cFormCheckInput type="checkbox" [(ngModel)]="autoRefreshEnabled" (change)="toggleAutoRefresh()" id="autoRefreshSwitch"/>
+              <label cFormCheckLabel for="autoRefreshSwitch" class="small text-muted text-nowrap">Auto-refresh (30s)</label>
+            </c-form-check>
+          </div>
           <button cButton color="primary" (click)="refreshData()">Refresh</button>
         </div>
       </c-card-header>
       <c-card-body>
-        <table cTable>
+        <table cTable hover>
           <thead>
             <tr>
               <th>#</th>
-              <th>Coin</th>
-              <th>Price</th>
-              <th>24h Change</th>
-              <th>Day Change (00:00)</th>
+              <th (click)="sort('name')" class="sortable-header">Coin {{ getSortIcon('name') }}</th>
+              <th (click)="sort('lastPrice')" class="sortable-header">Price {{ getSortIcon('lastPrice') }}</th>
+              <th (click)="sort('priceChangePercent')" class="sortable-header">24h Change {{ getSortIcon('priceChangePercent') }}</th>
+              <th (click)="sort('dailyChangePercent')" class="sortable-header">Day Change (00:00) {{ getSortIcon('dailyChangePercent') }}</th>
+              <th (click)="sort('holdings')" class="sortable-header" style="width: 150px;">Holdings {{ getSortIcon('holdings') }}</th>
+              <th (click)="sort('value')" class="sortable-header">Value {{ getSortIcon('value') }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let crypto of cryptocurrencies; let i = index" 
+            <tr *ngFor="let crypto of filteredCryptocurrencies; let i = index" 
                 class="clickable-row" 
+                [class.has-holdings]="(crypto.holdings || 0) > 0"
                 (click)="openChart(crypto)">
-              <td>{{ i + 1 }}</td>
-              <td>{{ crypto.name }}</td>
-              <td>{{ crypto.lastPrice | currency }}</td>
+              <td class="text-muted">{{ i + 1 }}</td>
+              <td>
+                <div class="d-flex align-items-center">
+                  <span class="fw-bold me-2">{{ crypto.name }}</span>
+                  <ng-container *ngIf="getPerformanceBadge(crypto) as badge">
+                    <span class="badge {{ badge.class }}" title="{{ badge.label }}">
+                      {{ badge.emoji }} {{ badge.label }}
+                    </span>
+                  </ng-container>
+                </div>
+              </td>
+              <td class="fw-semibold">{{ crypto.lastPrice | currency }}</td>
               <td
                 [ngClass]="{
                     'green-text': +crypto.priceChangePercent >= 0,
                     'red-text': +crypto.priceChangePercent < 0
                 }"
-                >{{ +crypto.priceChangePercent / 100 | percent:'1.2-2' }} ({{ crypto.priceChange | currency }})</td>
+                >
+                <span class="arrow-icon">{{ getArrow(crypto.priceChangePercent) }}</span>
+                {{ +crypto.priceChangePercent / 100 | percent:'1.2-2' }} 
+                <small class="text-muted ms-1">({{ crypto.priceChange | currency }})</small>
+              </td>
               <td
                 [ngClass]="{
                     'green-text': crypto.dailyChangePercent !== 'N/A' && +crypto.dailyChangePercent >= 0,
                     'red-text': crypto.dailyChangePercent !== 'N/A' && +crypto.dailyChangePercent < 0
                 }"
-                >{{ crypto.dailyChangePercent !== 'N/A' ? (+crypto.dailyChangePercent / 100 | percent:'1.2-2') : 'N/A' }} 
-                <span *ngIf="crypto.dailyChange !== 'N/A'">({{ crypto.dailyChange | currency }})</span></td>
+                >
+                <span class="arrow-icon">{{ getArrow(crypto.dailyChangePercent) }}</span>
+                {{ crypto.dailyChangePercent !== 'N/A' ? (+crypto.dailyChangePercent / 100 | percent:'1.2-2') : 'N/A' }} 
+                <small class="text-muted ms-1" *ngIf="crypto.dailyChange !== 'N/A'">({{ crypto.dailyChange | currency }})</small>
+              </td>
+              <td (click)="$event.stopPropagation()">
+                <input 
+                  type="number" 
+                  class="form-control form-control-sm holding-input" 
+                  [ngModel]="crypto.holdings" 
+                  (ngModelChange)="updateHolding(crypto, $event)"
+                  placeholder="0.00"
+                  min="0"
+                  step="any">
+              </td>
+              <td class="fw-bold">
+                {{ (crypto.value || 0) | currency }}
+              </td>
             </tr>
           </tbody>
         </table>
