@@ -1,3 +1,29 @@
+<c-row class="mb-4" *ngIf="globalData">
+  <c-col xs>
+    <c-card class="bg-dark text-white">
+      <c-card-body class="d-flex justify-content-around align-items-center py-2">
+        <div>
+          <small class="text-muted d-block">Market Cap</small>
+          <span class="fw-bold">{{ globalData.total_market_cap['usd'] | currency:'USD':'symbol':'1.0-0' }}</span>
+          <span [class.text-success]="globalData.market_cap_change_percentage_24h_usd >= 0" 
+                [class.text-danger]="globalData.market_cap_change_percentage_24h_usd < 0"
+                class="ms-1 small">
+            {{ globalData.market_cap_change_percentage_24h_usd | number:'1.1-2' }}%
+          </span>
+        </div>
+        <div>
+          <small class="text-muted d-block">24h Volume</small>
+          <span class="fw-bold">{{ globalData.total_volume['usd'] | currency:'USD':'symbol':'1.0-0' }}</span>
+        </div>
+        <div>
+          <small class="text-muted d-block">BTC Dominance</small>
+          <span class="fw-bold">{{ globalData.market_cap_percentage['btc'] | number:'1.1-1' }}%</span>
+        </div>
+      </c-card-body>
+    </c-card>
+  </c-col>
+</c-row>
+
 <c-row class="mb-4">
   <c-col xs>
     <c-card class="bg-primary text-white">
@@ -33,6 +59,11 @@
               <input type="text" class="form-control" placeholder="Symbol (e.g. DOGE)" [(ngModel)]="newCoinSymbol" (keyup.enter)="addCoin()">
               <button cButton color="success" size="sm" (click)="addCoin()" [disabled]="!newCoinSymbol">Add</button>
             </div>
+
+            <c-form-check switch class="mb-0">
+              <input cFormCheckInput type="checkbox" [(ngModel)]="showPortfolioOnly" id="portfolioOnlySwitch"/>
+              <label cFormCheckLabel for="portfolioOnlySwitch" class="small text-muted text-nowrap">Portfolio Only</label>
+            </c-form-check>
 
             <c-form-check switch class="mb-0">
               <input cFormCheckInput type="checkbox" [(ngModel)]="autoRefreshEnabled" (change)="toggleAutoRefresh()" id="autoRefreshSwitch"/>
@@ -107,6 +138,9 @@
                 {{ (crypto.value || 0) | currency }}
               </td>
               <td (click)="$event.stopPropagation()">
+                <button cButton color="warning" variant="ghost" size="sm" (click)="openAlertModal(crypto, $event)" title="Set Price Alert" class="me-1">
+                  🔔
+                </button>
                 <button cButton color="danger" variant="ghost" size="sm" (click)="removeCoin(crypto, $event)" title="Remove coin">
                   🗑️
                 </button>
@@ -128,3 +162,30 @@
   [currentPrice]="selectedCrypto.lastPrice"
   (visibleChange)="onChartModalVisibleChange($event)">
 </app-chart-modal>
+
+<!-- Alert Modal -->
+<c-modal [visible]="alertModalVisible" (visibleChange)="alertModalVisible = $event">
+  <c-modal-header>
+    <h5 cModalTitle>Set Price Alert for {{ alertCrypto?.name }}</h5>
+  </c-modal-header>
+  <c-modal-body>
+    <div class="mb-3">
+      <label cLabel>Target Price</label>
+      <input cFormControl type="number" [(ngModel)]="alertTargetPrice" placeholder="Enter target price">
+    </div>
+    <div class="mb-3">
+      <label cLabel>Condition</label>
+      <select cSelect [(ngModel)]="alertCondition">
+        <option value="above">Alert when price goes ABOVE</option>
+        <option value="below">Alert when price goes BELOW</option>
+      </select>
+    </div>
+  </c-modal-body>
+  <c-modal-footer>
+    <button (click)="alertModalVisible = false" cButton color="secondary">Cancel</button>
+    <button (click)="saveAlert()" cButton color="primary">Set Alert</button>
+  </c-modal-footer>
+</c-modal>
+
+<!-- News Feed -->
+<app-news-feed></app-news-feed>

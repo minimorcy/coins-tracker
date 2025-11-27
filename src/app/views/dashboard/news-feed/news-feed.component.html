@@ -1,0 +1,32 @@
+<c-card class="mb-4">
+  <c-card-header>
+    <div class="d-flex justify-content-between align-items-center">
+      <strong>Latest Crypto News</strong>
+      <button cButton color="primary" size="sm" (click)="loadNews()" [disabled]="loading">
+        {{ loading ? 'Loading...' : 'Refresh News' }}
+      </button>
+    </div>
+  </c-card-header>
+  <c-card-body>
+    <c-row>
+      <c-col xs="12" md="6" lg="4" *ngFor="let article of articles" class="mb-4">
+        <c-card class="h-100 article-card">
+          <div class="article-image" [style.background-image]="'url(' + article.imageurl + ')'"></div>
+          <c-card-body class="d-flex flex-column">
+            <h6 class="card-title mb-2">{{ article.title }}</h6>
+            <p class="card-text small text-muted mb-3 flex-grow-1">
+              {{ article.body | slice:0:100 }}...
+            </p>
+            <div class="d-flex justify-content-between align-items-center mt-auto">
+              <small class="text-muted">{{ article.source }}</small>
+              <a [href]="article.url" target="_blank" cButton color="link" class="text-decoration-none p-0">Read more</a>
+            </div>
+          </c-card-body>
+        </c-card>
+      </c-col>
+    </c-row>
+    <div *ngIf="articles.length === 0 && !loading" class="text-center py-3">
+      No news available at the moment.
+    </div>
+  </c-card-body>
+</c-card>

@@ -1,21 +1,19 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { Subscription, interval } from 'rxjs';
 import {
-    ButtonDirective,
-    CardBodyComponent,
-    CardComponent,
-    CardHeaderComponent,
-    ColComponent,
-    RowComponent,
-    TableDirective,
-    FormCheckComponent,
-    FormCheckInputDirective,
-    FormCheckLabelDirective
+    CardComponent, CardBodyComponent, RowComponent, ColComponent, CardHeaderComponent,
+    TableDirective, ButtonDirective, FormCheckComponent, FormCheckInputDirective,
+    FormCheckLabelDirective, ModalComponent, ModalHeaderComponent, ModalBodyComponent,
+    ModalFooterComponent, ModalTitleDirective, FormLabelDirective, FormControlDirective,
+    FormSelectDirective
 } from '@coreui/angular';
 import { ChartModalComponent } from './chart-modal/chart-modal.component';
 import { CryptoService } from '../../services/crypto.service';
 import { PortfolioService } from '../../services/portfolio.service';
 import { ConfigService } from '../../services/config.service';
+import { MarketService, GlobalData } from '../../services/market.service';
+import { AlertService, PriceAlert } from '../../services/alert.service';
+import { NewsFeedComponent } from './news-feed/news-feed.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -35,15 +33,30 @@ export interface CryptoData {
     templateUrl: 'dashboard.component.html',
     styleUrls: ['./dashboard.component.scss'],
     standalone: true,
-    imports: [CardComponent, CardBodyComponent, RowComponent, ColComponent, CardHeaderComponent, TableDirective, CommonModule, ButtonDirective, ChartModalComponent, FormsModule, FormCheckComponent, FormCheckInputDirective, FormCheckLabelDirective]
+    imports: [
+        CardComponent, CardBodyComponent, RowComponent, ColComponent, CardHeaderComponent,
+        TableDirective, CommonModule, ButtonDirective, ChartModalComponent, FormsModule,
+        FormCheckComponent, FormCheckInputDirective, FormCheckLabelDirective, NewsFeedComponent,
+        ModalComponent, ModalHeaderComponent, ModalBodyComponent, ModalFooterComponent,
+        ModalTitleDirective, FormLabelDirective, FormControlDirective, FormSelectDirective
+    ]
 })
 export class DashboardComponent implements OnInit, OnDestroy {
 
     private cryptoService = inject(CryptoService);
     private portfolioService = inject(PortfolioService);
     private configService = inject(ConfigService);
+    private marketService = inject(MarketService);
+    private alertService = inject(AlertService);
     public cryptocurrencies: CryptoData[] = [];
     public totalPortfolioValue: number = 0;
+    public globalData: GlobalData | null = null;
+
+    // Alert Modal state
+    public alertModalVisible: boolean = false;
+    public alertCrypto: CryptoData | null = null;
+    public alertTargetPrice: number | null = null;
+    public alertCondition: 'above' | 'below' = 'above';
 
     // Auto-refresh state
     public autoRefreshEnabled: boolean = true;
@@ -61,6 +74,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     public searchTerm: string = '';
     public sortColumn: string = '';
     public sortDirection: 'asc' | 'desc' = 'asc';
+    public showPortfolioOnly: boolean = false;
 
     constructor() {
     }
@@ -68,6 +82,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     ngOnInit(): void {
         // Initial load
         this.refreshData();
+        this.fetchGlobalData();
         this.startAutoRefresh();
 
         // Subscribe to config changes to refresh data when list changes
@@ -104,6 +119,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
         }
     }
 
+    fetchGlobalData(): void {
+        this.marketService.getGlobalData().subscribe(data => {
+            this.globalData = data;
+        });
+    }
+
     refreshData(): void {
         this.cryptoService.getPrices().subscribe({
             next: data => {
@@ -124,6 +145,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
                 });
 
                 this.calculateTotalValue();
+                this.checkAlerts();
                 console.log(this.cryptocurrencies);
             },
             error: err => {
@@ -200,8 +222,58 @@ export class DashboardComponent implements OnInit, OnDestroy {
         }
     }
 
+    // Alerts
+    openAlertModal(crypto: CryptoData, event: Event): void {
+        event.stopPropagation();
+        this.alertCrypto = crypto;
+        this.alertTargetPrice = parseFloat(crypto.lastPrice);
+        this.alertCondition = 'above';
+        this.alertModalVisible = true;
+    }
+
+    saveAlert(): void {
+        if (this.alertCrypto && this.alertTargetPrice) {
+            this.alertService.addAlert({
+                symbol: this.alertCrypto.name,
+                targetPrice: this.alertTargetPrice,
+                condition: this.alertCondition,
+                active: true
+            });
+            this.alertModalVisible = false;
+            alert(`Alert set for ${this.alertCrypto.name} at $${this.alertTargetPrice}`);
+        }
+    }
+
+    checkAlerts(): void {
+        const alerts = this.alertService.getAlerts().filter(a => a.active);
+        alerts.forEach(alert => {
+            const crypto = this.cryptocurrencies.find(c => c.name === alert.symbol);
+            if (crypto) {
+                const currentPrice = parseFloat(crypto.lastPrice);
+                if (alert.condition === 'above' && currentPrice >= alert.targetPrice) {
+                    this.notifyAlert(alert, currentPrice);
+                } else if (alert.condition === 'below' && currentPrice <= alert.targetPrice) {
+                    this.notifyAlert(alert, currentPrice);
+                }
+            }
+        });
+    }
+
+    notifyAlert(alert: PriceAlert, currentPrice: number): void {
+        // Simple notification for now
+        // In a real app, use a Toast service or Push Notifications
+        console.log(`ALERT: ${alert.symbol} is ${alert.condition} ${alert.targetPrice} (Current: ${currentPrice})`);
+        // Disable alert after triggering to avoid spam
+        this.alertService.toggleAlert(alert.symbol, alert.targetPrice);
+    }
+
     get filteredCryptocurrencies(): CryptoData[] {
         let filtered = this.cryptocurrencies;
+
+        // Filter by portfolio only
+        if (this.showPortfolioOnly) {
+            filtered = filtered.filter(c => (c.holdings || 0) > 0);
+        }
 
         // Filter by search term
         if (this.searchTerm) {
