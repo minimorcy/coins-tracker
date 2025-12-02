@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
-import { Subscription, interval } from 'rxjs';
+import { Subscription, interval, forkJoin } from 'rxjs';
 import {
     CardComponent, CardBodyComponent, RowComponent, ColComponent, CardHeaderComponent,
     TableDirective, ButtonDirective, FormCheckComponent, FormCheckInputDirective,
@@ -13,7 +13,9 @@ import { PortfolioService } from '../../services/portfolio.service';
 import { ConfigService } from '../../services/config.service';
 import { MarketService, GlobalData } from '../../services/market.service';
 import { AlertService, PriceAlert } from '../../services/alert.service';
+import { AnalysisService, TradeSetupResult } from '../../services/analysis.service';
 import { NewsFeedComponent } from './news-feed/news-feed.component';
+import { AnalysisModalComponent } from './analysis-modal/analysis-modal.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -26,6 +28,7 @@ export interface CryptoData {
     dailyChangePercent: string;
     holdings?: number;
     value?: number;
+    tradeSetup?: TradeSetupResult | null;
 }
 
 @Component({
@@ -38,7 +41,8 @@ export interface CryptoData {
         TableDirective, CommonModule, ButtonDirective, ChartModalComponent, FormsModule,
         FormCheckComponent, FormCheckInputDirective, FormCheckLabelDirective, NewsFeedComponent,
         ModalComponent, ModalHeaderComponent, ModalBodyComponent, ModalFooterComponent,
-        ModalTitleDirective, FormLabelDirective, FormControlDirective, FormSelectDirective
+        ModalTitleDirective, FormLabelDirective, FormControlDirective, FormSelectDirective,
+        AnalysisModalComponent
     ]
 })
 export class DashboardComponent implements OnInit, OnDestroy {
@@ -48,6 +52,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private configService = inject(ConfigService);
     private marketService = inject(MarketService);
     private alertService = inject(AlertService);
+    private analysisService = inject(AnalysisService);
     public cryptocurrencies: CryptoData[] = [];
     public totalPortfolioValue: number = 0;
     public globalData: GlobalData | null = null;
@@ -67,6 +72,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     public chartModalVisible: boolean = false;
     public selectedCrypto: CryptoData | null = null;
 
+    // Analysis modal state
+    public analysisModalVisible: boolean = false;
+    public selectedAnalysisCryptoName: string = '';
+    public selectedAnalysisData: TradeSetupResult | null = null;
+
     // Add coin state
     public newCoinSymbol: string = '';
 
@@ -75,6 +85,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     public sortColumn: string = '';
     public sortDirection: 'asc' | 'desc' = 'asc';
     public showPortfolioOnly: boolean = false;
+
+    // Feature flags
+    public showPortfolioFeatures: boolean = false;
 
     constructor() {
     }
@@ -146,6 +159,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
                 this.calculateTotalValue();
                 this.checkAlerts();
+                this.checkTradeSetups();
                 console.log(this.cryptocurrencies);
             },
             error: err => {
@@ -163,6 +177,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.chartModalVisible = visible;
         if (!visible) {
             this.selectedCrypto = null;
+        }
+    }
+
+    openAnalysisModal(crypto: CryptoData, event: Event): void {
+        event.stopPropagation();
+        this.selectedAnalysisCryptoName = crypto.name;
+        this.selectedAnalysisData = crypto.tradeSetup || null;
+        this.analysisModalVisible = true;
+    }
+
+    onAnalysisModalVisibleChange(visible: boolean): void {
+        this.analysisModalVisible = visible;
+        if (!visible) {
+            this.selectedAnalysisData = null;
         }
     }
 
@@ -324,5 +352,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
     getSortIcon(column: string): string {
         if (this.sortColumn !== column) return '↕';
         return this.sortDirection === 'asc' ? '↑' : '↓';
+    }
+    checkTradeSetups(): void {
+        this.cryptocurrencies.forEach(crypto => {
+            // Fetch Daily, 4H, and Hourly data
+            // We need enough data for EMA50, so let's fetch 100 candles
+            const daily$ = this.cryptoService.getHistoricalData(crypto.name, '1d', 100);
+            const fourHour$ = this.cryptoService.getHistoricalData(crypto.name, '4h', 100);
+            const hourly$ = this.cryptoService.getHistoricalData(crypto.name, '1h', 100);
+
+            forkJoin([daily$, hourly$, fourHour$]).subscribe({
+                next: ([daily, hourly, fourHour]) => {
+                    crypto.tradeSetup = this.analysisService.checkTradeSetup(daily, hourly, fourHour);
+                },
+                error: (err) => console.error(`Error checking setup for ${crypto.name}`, err)
+            });
+        });
     }
 }

@@ -1,10 +1,124 @@
 {
-  "cryptocurrencies": [
-    { "symbol": "BTCUSDT", "id": "bitcoin" },
-    { "symbol": "ETHUSDT", "id": "ethereum" },
-    { "symbol": "NEARUSDT", "id": "near" },
-    { "symbol": "HBARUSDT", "id": "hbar" },
-    { "symbol": "SUIUSDT", "id": "sui" },
-    { "symbol": "SOLUSDT", "id": "sol" }
-  ]
+    "cryptocurrencies": [
+        {
+            "symbol": "BTCUSDT",
+            "id": "bitcoin"
+        },
+        {
+            "symbol": "ETHUSDT",
+            "id": "ethereum"
+        },
+        {
+            "symbol": "BNBUSDT",
+            "id": "binancecoin"
+        },
+        {
+            "symbol": "SOLUSDT",
+            "id": "solana"
+        },
+        {
+            "symbol": "XRPUSDT",
+            "id": "ripple"
+        },
+        {
+            "symbol": "ADAUSDT",
+            "id": "cardano"
+        },
+        {
+            "symbol": "DOGEUSDT",
+            "id": "dogecoin"
+        },
+        {
+            "symbol": "AVAXUSDT",
+            "id": "avalanche-2"
+        },
+        {
+            "symbol": "TRXUSDT",
+            "id": "tron"
+        },
+        {
+            "symbol": "DOTUSDT",
+            "id": "polkadot"
+        },
+        {
+            "symbol": "LINKUSDT",
+            "id": "chainlink"
+        },
+        {
+            "symbol": "MATICUSDT",
+            "id": "matic-network"
+        },
+        {
+            "symbol": "SHIBUSDT",
+            "id": "shiba-inu"
+        },
+        {
+            "symbol": "LTCUSDT",
+            "id": "litecoin"
+        },
+        {
+            "symbol": "BCHUSDT",
+            "id": "bitcoin-cash"
+        },
+        {
+            "symbol": "ATOMUSDT",
+            "id": "cosmos"
+        },
+        {
+            "symbol": "UNIUSDT",
+            "id": "uniswap"
+        },
+        {
+            "symbol": "XLMUSDT",
+            "id": "stellar"
+        },
+        {
+            "symbol": "ETCUSDT",
+            "id": "ethereum-classic"
+        },
+        {
+            "symbol": "FILUSDT",
+            "id": "filecoin"
+        },
+        {
+            "symbol": "HBARUSDT",
+            "id": "hedera-hashgraph"
+        },
+        {
+            "symbol": "NEARUSDT",
+            "id": "near"
+        },
+        {
+            "symbol": "VETUSDT",
+            "id": "vechain"
+        },
+        {
+            "symbol": "APTUSDT",
+            "id": "aptos"
+        },
+        {
+            "symbol": "QNTUSDT",
+            "id": "quant-network"
+        },
+        {
+            "symbol": "CROUSDT",
+            "id": "crypto-com-chain"
+        },
+        {
+            "symbol": "ARBUSDT",
+            "id": "arbitrum"
+        },
+        {
+            "symbol": "AAVEUSDT",
+            "id": "aave"
+        },
+        {
+            "symbol": "ALGOUSDT",
+            "id": "algorand"
+        },
+        {
+            "symbol": "SUIUSDT",
+            "id": "sui"
+        }
+    ]
 }

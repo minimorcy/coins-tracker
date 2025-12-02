@@ -24,7 +24,7 @@
   </c-col>
 </c-row>
 
-<c-row class="mb-4">
+<c-row class="mb-4" *ngIf="showPortfolioFeatures">
   <c-col xs>
     <c-card class="bg-primary text-white">
       <c-card-body class="d-flex justify-content-between align-items-center">
@@ -60,9 +60,14 @@
               <button cButton color="success" size="sm" (click)="addCoin()" [disabled]="!newCoinSymbol">Add</button>
             </div>
 
-            <c-form-check switch class="mb-0">
+            <c-form-check switch class="mb-0" *ngIf="showPortfolioFeatures">
               <input cFormCheckInput type="checkbox" [(ngModel)]="showPortfolioOnly" id="portfolioOnlySwitch"/>
               <label cFormCheckLabel for="portfolioOnlySwitch" class="small text-muted text-nowrap">Portfolio Only</label>
+            </c-form-check>
+
+            <c-form-check switch class="mb-0">
+              <input cFormCheckInput type="checkbox" [(ngModel)]="showPortfolioFeatures" id="portfolioFeaturesSwitch"/>
+              <label cFormCheckLabel for="portfolioFeaturesSwitch" class="small text-muted text-nowrap">Enable Portfolio</label>
             </c-form-check>
 
             <c-form-check switch class="mb-0">
@@ -82,8 +87,8 @@
               <th (click)="sort('lastPrice')" class="sortable-header">Price {{ getSortIcon('lastPrice') }}</th>
               <th (click)="sort('priceChangePercent')" class="sortable-header">24h Change {{ getSortIcon('priceChangePercent') }}</th>
               <th (click)="sort('dailyChangePercent')" class="sortable-header">Day Change (00:00) {{ getSortIcon('dailyChangePercent') }}</th>
-              <th (click)="sort('holdings')" class="sortable-header" style="width: 150px;">Holdings {{ getSortIcon('holdings') }}</th>
-              <th (click)="sort('value')" class="sortable-header">Value {{ getSortIcon('value') }}</th>
+              <th *ngIf="showPortfolioFeatures" (click)="sort('holdings')" class="sortable-header" style="width: 150px;">Holdings {{ getSortIcon('holdings') }}</th>
+              <th *ngIf="showPortfolioFeatures" (click)="sort('value')" class="sortable-header">Value {{ getSortIcon('value') }}</th>
               <th style="width: 50px;"></th>
             </tr>
           </thead>
@@ -97,10 +102,22 @@
                 <div class="d-flex align-items-center">
                   <span class="fw-bold me-2">{{ crypto.name }}</span>
                   <ng-container *ngIf="getPerformanceBadge(crypto) as badge">
-                    <span class="badge {{ badge.class }}" title="{{ badge.label }}">
+                    <span class="badge {{ badge.class }} me-1" title="{{ badge.label }}">
                       {{ badge.emoji }} {{ badge.label }}
                     </span>
                   </ng-container>
+
+                  <!-- Trade Setup Indicator: Always visible -->
+                  <span class="badge cursor-pointer" 
+                        (click)="openAnalysisModal(crypto, $event)"
+                        [ngClass]="{
+                          'bg-success': crypto.tradeSetup?.state === 'bullish', 
+                          'bg-danger': crypto.tradeSetup?.state === 'bearish',
+                          'bg-secondary': !crypto.tradeSetup?.state
+                        }"
+                        title="{{ crypto.tradeSetup?.state ? (crypto.tradeSetup?.state === 'bullish' ? 'Bullish Setup Detected' : 'Bearish Setup Detected') : 'No Setup Detected' }}">
+                    {{ crypto.tradeSetup?.state ? (crypto.tradeSetup?.state === 'bullish' ? '✅ YES (Bull)' : '✅ YES (Bear)') : '❌ NO' }}
+                  </span>
                 </div>
               </td>
               <td class="fw-semibold">{{ crypto.lastPrice | currency }}</td>
@@ -124,7 +141,7 @@
                 {{ crypto.dailyChangePercent !== 'N/A' ? (+crypto.dailyChangePercent / 100 | percent:'1.2-2') : 'N/A' }} 
                 <small class="text-muted ms-1" *ngIf="crypto.dailyChange !== 'N/A'">({{ crypto.dailyChange | currency }})</small>
               </td>
-              <td (click)="$event.stopPropagation()">
+              <td *ngIf="showPortfolioFeatures" (click)="$event.stopPropagation()">
                 <input 
                   type="number" 
                   class="form-control form-control-sm holding-input" 
@@ -134,7 +151,7 @@
                   min="0"
                   step="any">
               </td>
-              <td class="fw-bold">
+              <td *ngIf="showPortfolioFeatures" class="fw-bold">
                 {{ (crypto.value || 0) | currency }}
               </td>
               <td (click)="$event.stopPropagation()">
@@ -189,3 +206,11 @@
 
 <!-- News Feed -->
 <app-news-feed></app-news-feed>
+
+<!-- Analysis Modal -->
+<app-analysis-modal
+  [visible]="analysisModalVisible"
+  [cryptoName]="selectedAnalysisCryptoName"
+  [analysisData]="selectedAnalysisData"
+  (visibleChange)="onAnalysisModalVisibleChange($event)">
+</app-analysis-modal>

@@ -51,6 +51,29 @@ export class CryptoService {
         );
     }
 
+    getHistoricalData(symbol: string, interval: string, limit: number): Observable<any[]> {
+        const cleanSymbol = symbol.replace(/"/g, '');
+        const url = `https://api.binance.com/api/v3/klines?symbol=${cleanSymbol}&interval=${interval}&limit=${limit}`;
+        return this.http.get<any>(url).pipe(
+            map(response => {
+                // Return array of [openTime, open, high, low, close, volume, ...]
+                // We mainly need close prices for EMA, but returning full kline is flexible
+                return response.map((kline: any[]) => ({
+                    time: kline[0],
+                    open: parseFloat(kline[1]),
+                    high: parseFloat(kline[2]),
+                    low: parseFloat(kline[3]),
+                    close: parseFloat(kline[4]),
+                    volume: parseFloat(kline[5])
+                }));
+            }),
+            catchError(error => {
+                console.error(`Error fetching historical data for ${symbol}:`, error);
+                return of([]);
+            })
+        );
+    }
+
     getPrices(): Observable<any> {
         return this.configService.getConfig().pipe(
             take(1),
