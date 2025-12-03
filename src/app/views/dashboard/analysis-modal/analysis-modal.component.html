@@ -1,23 +1,28 @@
-<c-modal [visible]="visible" (visibleChange)="handleVisibleChange($event)" size="lg">
+<c-modal [visible]="visible" (visibleChange)="handleVisibleChange($event)" size="xl">
   <c-modal-header>
     <h5 cModalTitle>Trade Setup Analysis: {{ cryptoName }}</h5>
   </c-modal-header>
   <c-modal-body *ngIf="analysisData">
     <div class="d-flex justify-content-center mb-4">
-      <span class="badge p-3 fs-5"
-            [ngClass]="{
-              'bg-success': analysisData.state === 'bullish',
-              'bg-danger': analysisData.state === 'bearish',
-              'bg-secondary': !analysisData.state
-            }">
-        Result: {{ analysisData.state ? (analysisData.state | titlecase) + ' Setup' : 'No Setup' }}
-      </span>
+      <div class="w-100 p-4 rounded text-center border"
+           [ngClass]="{
+             'bg-success-subtle border-success text-success-emphasis': analysisData.state === 'bullish',
+             'bg-danger-subtle border-danger text-danger-emphasis': analysisData.state === 'bearish',
+             'bg-secondary-subtle border-secondary text-secondary-emphasis': !analysisData.state
+           }">
+        <h2 class="m-0 fw-bold">
+          {{ analysisData.state ? (analysisData.state | uppercase) + ' SETUP DETECTED' : 'NO CLEAR SETUP' }}
+        </h2>
+        <div class="mt-2 fs-5" *ngIf="analysisData.state">
+          Confidence: High | Ready for Trade Plan
+        </div>
+      </div>
     </div>
 
     <c-row>
       <!-- Daily Analysis -->
       <c-col md="6">
-        <c-card class="h-100">
+        <c-card class="h-100 bg-body-tertiary">
           <c-card-body>
             <h5 class="card-title mb-3">Daily Timeframe (Trend)</h5>
             <div class="mb-2">
@@ -42,7 +47,7 @@
                  }">
               Trend (4H): {{ analysisData.fourHour.trend | uppercase }}
             </div>
-            <div class="mt-2 small text-muted">
+            <div class="mt-2 small text-secondary">
               Condition: Price vs EMA50 & EMA Slope
             </div>
           </c-card-body>
@@ -51,7 +56,7 @@
 
       <!-- Hourly Analysis -->
       <c-col md="6">
-        <c-card class="h-100">
+        <c-card class="h-100 bg-body-tertiary">
           <c-card-body>
             <h5 class="card-title mb-3">1h Timeframe (Entry)</h5>
             <div class="mb-2">
@@ -66,51 +71,84 @@
                    'bg-secondary': !analysisData.hourly.touched
                  }">
               Touched EMA50: {{ analysisData.hourly.touched ? 'YES' : 'NO' }}
+              <span *ngIf="analysisData.hourly.touched" class="fw-bold ms-1">
+                {{ analysisData.hourly.price > analysisData.hourly.ema50 ? '↑' : '↓' }}
+              </span>
             </div>
             
             <hr class="my-3">
             
-            <div class="mb-2">
-              <strong>RSI (14):</strong> 
-              <span [ngClass]="{
-                'text-success': analysisData.hourly.rsi < 30,
-                'text-danger': analysisData.hourly.rsi > 70,
-                'text-warning': analysisData.hourly.rsi >= 30 && analysisData.hourly.rsi <= 70
-              }">{{ analysisData.hourly.rsi | number:'1.2-2' }}</span>
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <div class="p-2 border rounded bg-dark-subtle">
+                        <small class="text-secondary d-block">RSI (14)</small>
+                        <span class="fw-bold" [ngClass]="{
+                          'text-success': analysisData.hourly.rsi < 30,
+                          'text-danger': analysisData.hourly.rsi > 70,
+                          'text-warning': analysisData.hourly.rsi >= 30 && analysisData.hourly.rsi <= 70
+                        }">{{ analysisData.hourly.rsi | number:'1.1-1' }}</span>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-2 border rounded bg-dark-subtle">
+                        <small class="text-secondary d-block">Stoch RSI</small>
+                        <span class="fw-bold" [ngClass]="{
+                             'text-success': analysisData.hourly.stochRsi.k < 20, 
+                             'text-danger': analysisData.hourly.stochRsi.k > 80
+                           }">
+                             K: {{ analysisData.hourly.stochRsi.k | number:'1.0-0' }}
+                        </span>
+                        <small class="text-secondary ms-1">D: {{ analysisData.hourly.stochRsi.d | number:'1.0-0' }}</small>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="p-2 border rounded bg-dark-subtle">
+                        <small class="text-secondary d-block">MACD</small>
+                        <div class="d-flex justify-content-between align-items-center">
+                           <span class="fw-bold" [ngClass]="{'text-success': analysisData.hourly.macd.histogram > 0, 'text-danger': analysisData.hourly.macd.histogram < 0}">
+                             Hist: {{ analysisData.hourly.macd.histogram | number:'1.2-2' }}
+                           </span>
+                           <small class="text-secondary">
+                             MACD: {{ analysisData.hourly.macd.macd | number:'1.2-2' }} | Sig: {{ analysisData.hourly.macd.signal | number:'1.2-2' }}
+                           </small>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="mb-2">
-              <strong>Volume:</strong> 
+
+            <div class="mb-2 mt-3">
+              <strong>Volume: </strong> 
               <span [ngClass]="{
                 'text-success': analysisData.hourly.volume.status === 'high',
                 'text-danger': analysisData.hourly.volume.status === 'low'
               }">{{ analysisData.hourly.volume.status | titlecase }}</span>
             </div>
             <div class="mb-2">
-              <strong>ATR (14):</strong> {{ analysisData.hourly.atr | number:'1.4-4' }}
+              <strong>ATR (14): </strong> {{ analysisData.hourly.atr | number:'1.4-4' }}
             </div>
             <div class="mb-2">
-              <strong>ADX (14):</strong> 
+              <strong>ADX (14): </strong> 
               <span [ngClass]="{
                 'text-success': analysisData.hourly.adx.strength === 'strong',
-                'text-muted': analysisData.hourly.adx.strength === 'weak'
+                'text-secondary': analysisData.hourly.adx.strength === 'weak'
               }">{{ analysisData.hourly.adx.value | number:'1.2-2' }} ({{ analysisData.hourly.adx.strength | titlecase }})</span>
             </div>
 
             <div *ngIf="analysisData.hourly.patterns.length > 0" class="mb-2">
-              <strong>Patterns:</strong>
+              <strong>Patterns: </strong>
               <span class="badge bg-info ms-1" *ngFor="let p of analysisData.hourly.patterns">{{ p }}</span>
             </div>
 
             <div *ngIf="analysisData.hourly.divergence" class="mb-2">
-              <strong>Divergence:</strong>
+              <strong>Divergence: </strong>
               <span class="badge" [ngClass]="{
                 'bg-success': analysisData.hourly.divergence === 'bullish',
                 'bg-danger': analysisData.hourly.divergence === 'bearish'
               }">{{ analysisData.hourly.divergence | titlecase }}</span>
             </div>
 
-            <div *ngIf="analysisData.state" class="mt-3 p-2 bg-light rounded border">
-              <div class="small fw-bold text-muted mb-1">Trade Plan</div>
+            <div *ngIf="analysisData.state" class="mt-3 p-3 rounded border border-secondary bg-dark-subtle">
+              <div class="small fw-bold mb-2">Trade Plan</div>
               <div class="d-flex justify-content-between">
                 <span class="text-danger">SL: {{ analysisData.hourly.stopLoss | currency }}</span>
                 <span class="text-success">TP: {{ analysisData.hourly.takeProfit | currency }}</span>
@@ -121,6 +159,257 @@
         </c-card>
       </c-col>
     </c-row>
+
+    <!-- Strategy Details Accordion -->
+    <div class="mt-4">
+      <c-accordion [flush]="true">
+        <c-accordion-item>
+          <ng-template cAccordionHeader>
+            <button cAccordionButton type="button">
+              📊 Detalles Completos de la Estrategia Experta
+            </button>
+          </ng-template>
+          <ng-template cAccordionBody>
+            <div class="p-3">
+              <!-- Estado General -->
+              <div class="mb-4">
+                <h6 class="fw-bold text-primary mb-3">📈 ESTADO GENERAL</h6>
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <div class="p-3 border rounded bg-body-tertiary">
+                      <small class="text-secondary d-block mb-1">Setup Detectado</small>
+                      <span class="fw-bold fs-5" [ngClass]="{
+                        'text-success': analysisData.state === 'bullish',
+                        'text-danger': analysisData.state === 'bearish',
+                        'text-secondary': !analysisData.state
+                      }">{{ analysisData.state ? (analysisData.state | uppercase) : 'NO DETECTADO' }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="p-3 border rounded bg-body-tertiary">
+                      <small class="text-secondary d-block mb-1">Alineación de Tendencias</small>
+                      <span class="fw-bold" [ngClass]="{
+                        'text-success': analysisData.daily.trend === analysisData.fourHour.trend && analysisData.daily.trend !== 'neutral',
+                        'text-danger': analysisData.daily.trend !== analysisData.fourHour.trend || analysisData.daily.trend === 'neutral'
+                      }">
+                        {{ (analysisData.daily.trend === analysisData.fourHour.trend && analysisData.daily.trend !== 'neutral') ? '✅ ALINEADAS' : '❌ NO ALINEADAS' }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="p-3 border rounded bg-body-tertiary">
+                      <small class="text-secondary d-block mb-1">Distancia a EMA50</small>
+                      <span class="fw-bold" [ngClass]="{
+                        'text-success': analysisData.hourly.touched,
+                        'text-warning': !analysisData.hourly.touched
+                      }">{{ getDistanceToEma() }}%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Análisis de Tendencias -->
+              <div class="mb-4">
+                <h6 class="fw-bold text-primary mb-3">1️⃣ ANÁLISIS DE TENDENCIAS</h6>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <div class="p-3 border rounded bg-body-tertiary">
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>Daily Timeframe</strong>
+                        <span class="fs-4">{{ getTrendIcon(analysisData.daily.trend) }}</span>
+                      </div>
+                      <div class="mb-1"><small class="text-secondary">Precio:</small> <strong>{{ analysisData.daily.price | currency }}</strong></div>
+                      <div class="mb-1"><small class="text-secondary">EMA 50:</small> <strong>{{ analysisData.daily.ema50 | currency }}</strong></div>
+                      <div class="mt-2">
+                        <span class="badge" [ngClass]="{
+                          'bg-success': analysisData.daily.trend === 'bullish',
+                          'bg-danger': analysisData.daily.trend === 'bearish',
+                          'bg-secondary': analysisData.daily.trend === 'neutral'
+                        }">{{ analysisData.daily.trend | uppercase }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="p-3 border rounded bg-body-tertiary">
+                      <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>4H Timeframe</strong>
+                        <span class="fs-4">{{ getTrendIcon(analysisData.fourHour.trend) }}</span>
+                      </div>
+                      <div class="mb-2"><small class="text-secondary">Tendencia:</small> 
+                        <span class="badge" [ngClass]="{
+                          'bg-success': analysisData.fourHour.trend === 'bullish',
+                          'bg-danger': analysisData.fourHour.trend === 'bearish',
+                          'bg-secondary': analysisData.fourHour.trend === 'neutral'
+                        }">{{ analysisData.fourHour.trend | uppercase }}</span>
+                      </div>
+                      <div class="alert alert-info mb-0 py-2 px-3" role="alert">
+                        <small>✓ Requisito: Debe coincidir con Daily para validar setup</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Indicadores Técnicos -->
+              <div class="mb-4">
+                <h6 class="fw-bold text-primary mb-3">2️⃣ INDICADORES TÉCNICOS (1H)</h6>
+                <div class="row g-3">
+                  <div class="col-md-3">
+                    <div class="p-3 border rounded bg-body-tertiary text-center">
+                      <small class="text-secondary d-block mb-2">RSI (14)</small>
+                      <div class="fs-3 fw-bold mb-2" [ngClass]="{
+                        'text-success': analysisData.hourly.rsi < 30,
+                        'text-danger': analysisData.hourly.rsi > 70,
+                        'text-warning': analysisData.hourly.rsi >= 30 && analysisData.hourly.rsi <= 70
+                      }">{{ analysisData.hourly.rsi | number:'1.1-1' }}</div>
+                      <small class="text-secondary">
+                        <span *ngIf="analysisData.hourly.rsi < 30">Sobreventa</span>
+                        <span *ngIf="analysisData.hourly.rsi > 70">Sobrecompra</span>
+                        <span *ngIf="analysisData.hourly.rsi >= 30 && analysisData.hourly.rsi <= 70">Neutral</span>
+                      </small>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="p-3 border rounded bg-body-tertiary text-center">
+                      <small class="text-secondary d-block mb-2">Stochastic RSI</small>
+                      <div class="mb-2">
+                        <span class="fw-bold fs-5" [ngClass]="{
+                          'text-success': analysisData.hourly.stochRsi.k < 20,
+                          'text-danger': analysisData.hourly.stochRsi.k > 80
+                        }">K: {{ analysisData.hourly.stochRsi.k | number:'1.0-0' }}</span>
+                      </div>
+                      <div>
+                        <small class="text-secondary">D: {{ analysisData.hourly.stochRsi.d | number:'1.0-0' }}</small>
+                      </div>
+                      <small class="text-secondary d-block mt-2">
+                        <span *ngIf="analysisData.hourly.stochRsi.k < 20">Oversold ✓</span>
+                        <span *ngIf="analysisData.hourly.stochRsi.k > 80">Overbought ✓</span>
+                        <span *ngIf="analysisData.hourly.stochRsi.k >= 20 && analysisData.hourly.stochRsi.k <= 80">
+                          {{ analysisData.hourly.stochRsi.k > analysisData.hourly.stochRsi.d ? 'K > D ↑' : 'K < D ↓' }}
+                        </span>
+                      </small>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="p-3 border rounded bg-body-tertiary text-center">
+                      <small class="text-secondary d-block mb-2">MACD</small>
+                      <div class="mb-1">
+                        <span class="fw-bold" [ngClass]="{
+                          'text-success': analysisData.hourly.macd.histogram > 0,
+                          'text-danger': analysisData.hourly.macd.histogram < 0
+                        }">Hist: {{ analysisData.hourly.macd.histogram | number:'1.4-4' }}</span>
+                      </div>
+                      <div class="mb-1"><small class="text-secondary">MACD: {{ analysisData.hourly.macd.macd | number:'1.4-4' }}</small></div>
+                      <div><small class="text-secondary">Signal: {{ analysisData.hourly.macd.signal | number:'1.4-4' }}</small></div>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="p-3 border rounded bg-body-tertiary text-center">
+                      <small class="text-secondary d-block mb-2">ADX (14)</small>
+                      <div class="fs-3 fw-bold mb-2" [ngClass]="{
+                        'text-success': analysisData.hourly.adx.value > 25,
+                        'text-warning': analysisData.hourly.adx.value >= 20 && analysisData.hourly.adx.value <= 25,
+                        'text-secondary': analysisData.hourly.adx.value < 20
+                      }">{{ analysisData.hourly.adx.value | number:'1.1-1' }}</div>
+                      <small class="text-secondary">{{ analysisData.hourly.adx.strength | titlecase }}</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Volumen y Volatilidad -->
+              <div class="mb-4">
+                <h6 class="fw-bold text-primary mb-3">3️⃣ VOLUMEN Y VOLATILIDAD</h6>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <div class="p-3 border rounded bg-body-tertiary">
+                      <strong class="d-block mb-2">Análisis de Volumen</strong>
+                      <div class="mb-1"><small class="text-secondary">Volumen Actual:</small> <strong>{{ analysisData.hourly.volume.current | number:'1.0-0' }}</strong></div>
+                      <div class="mb-1"><small class="text-secondary">Promedio (20):</small> <strong>{{ analysisData.hourly.volume.average | number:'1.0-0' }}</strong></div>
+                      <div class="mt-2">
+                        <span class="badge" [ngClass]="{
+                          'bg-success': analysisData.hourly.volume.status === 'high',
+                          'bg-danger': analysisData.hourly.volume.status === 'low',
+                          'bg-secondary': analysisData.hourly.volume.status === 'normal'
+                        }">{{ analysisData.hourly.volume.status | uppercase }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="p-3 border rounded bg-body-tertiary">
+                      <strong class="d-block mb-2">Average True Range (ATR)</strong>
+                      <div class="fs-4 fw-bold text-info mb-2">{{ analysisData.hourly.atr | number:'1.6-6' }}</div>
+                      <small class="text-secondary">Usado para calcular Stop Loss (1.5x ATR)</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Patrones y Divergencias -->
+              <div class="mb-4" *ngIf="analysisData.hourly.patterns.length > 0 || analysisData.hourly.divergence">
+                <h6 class="fw-bold text-primary mb-3">4️⃣ PATRONES Y SEÑALES</h6>
+                <div class="row g-3">
+                  <div class="col-md-6" *ngIf="analysisData.hourly.patterns.length > 0">
+                    <div class="p-3 border rounded bg-body-tertiary">
+                      <strong class="d-block mb-2">Patrones de Velas</strong>
+                      <div>
+                        <span class="badge bg-info me-1 mb-1" *ngFor="let p of analysisData.hourly.patterns">{{ p }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6" *ngIf="analysisData.hourly.divergence">
+                    <div class="p-3 border rounded bg-body-tertiary">
+                      <strong class="d-block mb-2">Divergencia RSI</strong>
+                      <span class="badge fs-6" [ngClass]="{
+                        'bg-success': analysisData.hourly.divergence === 'bullish',
+                        'bg-danger': analysisData.hourly.divergence === 'bearish'
+                      }">{{ analysisData.hourly.divergence | titlecase }} Divergence</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Plan de Trading -->
+              <div *ngIf="analysisData.state">
+                <h6 class="fw-bold text-primary mb-3">5️⃣ PLAN DE TRADING</h6>
+                <div class="p-4 border rounded bg-body-tertiary">
+                  <div class="row g-3">
+                    <div class="col-md-4">
+                      <div class="text-center p-3 border rounded" [ngClass]="{
+                        'bg-success-subtle border-success': analysisData.state === 'bullish',
+                        'bg-danger-subtle border-danger': analysisData.state === 'bearish'
+                      }">
+                        <small class="text-secondary d-block mb-1">Entrada</small>
+                        <div class="fs-4 fw-bold">{{ analysisData.hourly.price | currency }}</div>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="text-center p-3 border rounded bg-danger-subtle border-danger">
+                        <small class="text-secondary d-block mb-1">Stop Loss</small>
+                        <div class="fs-4 fw-bold text-danger">{{ analysisData.hourly.stopLoss | currency }}</div>
+                        <small class="text-secondary">(1.5 ATR)</small>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="text-center p-3 border rounded bg-success-subtle border-success">
+                        <small class="text-secondary d-block mb-1">Take Profit</small>
+                        <div class="fs-4 fw-bold text-success">{{ analysisData.hourly.takeProfit | currency }}</div>
+                        <small class="text-secondary">(R:R 1:2)</small>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="alert alert-warning mt-3 mb-0" role="alert">
+                    <strong>⚠️ Importante:</strong> Este análisis es educativo. Siempre realiza tu propia investigación y gestión de riesgo.
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </ng-template>
+        </c-accordion-item>
+      </c-accordion>
+    </div>
+
   </c-modal-body>
   <c-modal-footer>
     <button (click)="handleVisibleChange(false)" cButton color="secondary">Close</button>

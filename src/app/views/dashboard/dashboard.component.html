@@ -19,6 +19,17 @@
           <small class="text-muted d-block">BTC Dominance</small>
           <span class="fw-bold">{{ globalData.market_cap_percentage['btc'] | number:'1.1-1' }}%</span>
         </div>
+        <div *ngIf="fearAndGreedIndex">
+          <small class="text-muted d-block">Fear & Greed</small>
+          <span class="fw-bold" [ngClass]="{
+            'text-success': +fearAndGreedIndex.value > 55,
+            'text-danger': +fearAndGreedIndex.value < 45,
+            'text-warning': +fearAndGreedIndex.value >= 45 && +fearAndGreedIndex.value <= 55
+          }">
+            {{ fearAndGreedIndex.value }} 
+            <small class="text-muted">({{ fearAndGreedIndex.value_classification }})</small>
+          </span>
+        </div>
       </c-card-body>
     </c-card>
   </c-col>
@@ -84,6 +95,7 @@
             <tr>
               <th>#</th>
               <th (click)="sort('name')" class="sortable-header">Coin {{ getSortIcon('name') }}</th>
+              <th class="text-center">Strategy</th>
               <th (click)="sort('lastPrice')" class="sortable-header">Price {{ getSortIcon('lastPrice') }}</th>
               <th (click)="sort('priceChangePercent')" class="sortable-header">24h Change {{ getSortIcon('priceChangePercent') }}</th>
               <th (click)="sort('dailyChangePercent')" class="sortable-header">Day Change (00:00) {{ getSortIcon('dailyChangePercent') }}</th>
@@ -106,19 +118,22 @@
                       {{ badge.emoji }} {{ badge.label }}
                     </span>
                   </ng-container>
-
-                  <!-- Trade Setup Indicator: Always visible -->
-                  <span class="badge cursor-pointer" 
-                        (click)="openAnalysisModal(crypto, $event)"
-                        [ngClass]="{
-                          'bg-success': crypto.tradeSetup?.state === 'bullish', 
-                          'bg-danger': crypto.tradeSetup?.state === 'bearish',
-                          'bg-secondary': !crypto.tradeSetup?.state
-                        }"
-                        title="{{ crypto.tradeSetup?.state ? (crypto.tradeSetup?.state === 'bullish' ? 'Bullish Setup Detected' : 'Bearish Setup Detected') : 'No Setup Detected' }}">
-                    {{ crypto.tradeSetup?.state ? (crypto.tradeSetup?.state === 'bullish' ? '✅ YES (Bull)' : '✅ YES (Bear)') : '❌ NO' }}
-                  </span>
                 </div>
+              </td>
+              <td class="text-center">
+                <span class="badge cursor-pointer" 
+                      (click)="openAnalysisModal(crypto, $event)"
+                      [ngClass]="{
+                        'bg-success': crypto.tradeSetup?.state === 'bullish', 
+                        'bg-danger': crypto.tradeSetup?.state === 'bearish',
+                        'bg-secondary': !crypto.tradeSetup?.state
+                      }"
+                      title="{{ crypto.tradeSetup?.state ? (crypto.tradeSetup?.state === 'bullish' ? 'Bullish Setup Detected' : 'Bearish Setup Detected') : 'No Setup Detected' }}">
+                  {{ crypto.tradeSetup?.state ? (crypto.tradeSetup?.state === 'bullish' ? '✅ YES' : '✅ YES') : '❌ NO' }}
+                  <span *ngIf="crypto.tradeSetup?.state && crypto.tradeSetup?.hourly?.touched" class="ms-1 fw-bold text-white">
+                    {{ crypto.tradeSetup!.hourly.price > crypto.tradeSetup!.hourly.ema50 ? '↑' : '↓' }}
+                  </span>
+                </span>
               </td>
               <td class="fw-semibold">{{ crypto.lastPrice | currency }}</td>
               <td

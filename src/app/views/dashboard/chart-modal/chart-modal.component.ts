@@ -1,46 +1,38 @@
-import { Component, Input, Output, EventEmitter, OnInit, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
     ModalModule,
-    ButtonDirective,
-    ButtonGroupComponent
+    ButtonDirective
 } from '@coreui/angular';
-import { ChartService, ChartDataPoint } from '../../../services/chart.service';
-import { Chart, registerables } from 'chart.js';
-import 'chartjs-adapter-date-fns';
 
-Chart.register(...registerables);
-
-type TimeInterval = '1h' | '24h' | '7d' | '30d';
+declare const TradingView: any;
 
 @Component({
     selector: 'app-chart-modal',
     templateUrl: './chart-modal.component.html',
     styleUrls: ['./chart-modal.component.scss'],
     standalone: true,
-    imports: [CommonModule, ModalModule, ButtonDirective, ButtonGroupComponent]
+    imports: [CommonModule, ModalModule, ButtonDirective]
 })
-export class ChartModalComponent implements OnInit, AfterViewInit {
+export class ChartModalComponent implements OnInit, AfterViewInit, OnDestroy {
     @Input() visible: boolean = false;
     @Input() cryptoSymbol: string = '';
     @Input() cryptoName: string = '';
     @Input() currentPrice: string = '';
     @Output() visibleChange = new EventEmitter<boolean>();
 
-    @ViewChild('chartCanvas', { static: false }) chartCanvas!: ElementRef<HTMLCanvasElement>;
+    private scriptLoaded = false;
 
-    selectedInterval: TimeInterval = '24h';
-    loading: boolean = false;
-    chart: Chart | null = null;
-
-    constructor(private chartService: ChartService) { }
+    constructor() { }
 
     ngOnInit(): void {
-        // Chart will be loaded when modal becomes visible
+        this.loadTradingViewScript();
     }
 
     ngAfterViewInit(): void {
-        // Chart will be loaded when modal becomes visible
+    }
+
+    ngOnDestroy(): void {
     }
 
     onVisibleChange(visible: boolean): void {
@@ -48,155 +40,60 @@ export class ChartModalComponent implements OnInit, AfterViewInit {
         this.visibleChange.emit(visible);
 
         if (visible && this.cryptoSymbol) {
-            // Wait for modal animation and DOM to be ready
             setTimeout(() => {
-                if (this.chartCanvas) {
-                    this.loadChartData();
-                }
-            }, 300);
-        } else if (!visible && this.chart) {
-            this.chart.destroy();
-            this.chart = null;
+                this.initTradingViewWidget();
+            }, 100);
         }
     }
 
-    selectInterval(interval: TimeInterval): void {
-        this.selectedInterval = interval;
-        this.loadChartData();
+    loadTradingViewScript(): void {
+        if (this.scriptLoaded) return;
+
+        const script = document.createElement('script');
+        script.src = 'https://s3.tradingview.com/tv.js';
+        script.async = true;
+        script.onload = () => {
+            this.scriptLoaded = true;
+        };
+        document.head.appendChild(script);
     }
 
-    loadChartData(): void {
-        if (!this.chartCanvas) {
-            console.log('Chart canvas not available yet');
+    initTradingViewWidget(): void {
+        if (typeof TradingView === 'undefined') {
+            setTimeout(() => this.initTradingViewWidget(), 200);
             return;
         }
 
-        console.log('Loading chart data for:', this.cryptoSymbol, 'interval:', this.selectedInterval);
-        this.loading = true;
-        const config = this.chartService.getIntervalConfig(this.selectedInterval);
-
-        this.chartService.getHistoricalData(this.cryptoSymbol, config.interval, config.limit)
-            .subscribe({
-                next: (data: ChartDataPoint[]) => {
-                    console.log('Chart data received:', data.length, 'points');
-                    this.loading = false;
-                    this.renderChart(data);
-                },
-                error: (err) => {
-                    console.error('Error loading chart data:', err);
-                    this.loading = false;
-                }
-            });
-    }
-
-    renderChart(data: ChartDataPoint[]): void {
-        console.log('renderChart called with', data.length, 'data points');
-
-        if (!this.chartCanvas) {
-            console.log('No canvas element');
-            return;
+        // Clean symbol for Binance (remove quotes if any)
+        let symbol = this.cryptoSymbol.replace(/"/g, '');
+        // Ensure it has USDT suffix if not present (assuming USDT pairs for now based on config)
+        if (!symbol.endsWith('USDT')) {
+            symbol += 'USDT';
         }
 
-        // Destroy existing chart
-        if (this.chart) {
-            this.chart.destroy();
-        }
-
-        const ctx = this.chartCanvas.nativeElement.getContext('2d');
-        if (!ctx) {
-            console.log('Could not get 2d context');
-            return;
-        }
-
-        const labels = data.map(d => d.time);
-        const prices = data.map(d => d.price);
-
-        console.log('First price:', prices[0], 'Last price:', prices[prices.length - 1]);
-
-        // Determine if price is going up or down for color
-        const firstPrice = prices[0] || 0;
-        const lastPrice = prices[prices.length - 1] || 0;
-        const isPositive = lastPrice >= firstPrice;
-        const lineColor = isPositive ? 'rgb(75, 192, 75)' : 'rgb(255, 99, 99)';
-
-        this.chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Price',
-                    data: prices,
-                    borderColor: lineColor,
-                    backgroundColor: isPositive ? 'rgba(75, 192, 75, 0.1)' : 'rgba(255, 99, 99, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: 0,
-                    pointHoverRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        callbacks: {
-                            label: (context) => {
-                                const value = context.parsed.y;
-                                return value !== null ? `$${value.toFixed(2)}` : '';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: {
-                            unit: this.getTimeUnit(),
-                            displayFormats: {
-                                minute: 'HH:mm',
-                                hour: 'HH:mm',
-                                day: 'MMM dd'
-                            }
-                        },
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        ticks: {
-                            callback: (value) => {
-                                return '$' + value;
-                            }
-                        }
-                    }
-                },
-                interaction: {
-                    mode: 'nearest',
-                    axis: 'x',
-                    intersect: false
-                }
+        new TradingView.widget({
+            "width": "100%",
+            "height": 500,
+            "symbol": "BINANCE:" + symbol,
+            "interval": "60",
+            "timezone": "Etc/UTC",
+            "theme": "dark",
+            "style": "1",
+            "locale": "en",
+            "toolbar_bg": "#f1f3f6",
+            "enable_publishing": false,
+            "hide_side_toolbar": false,
+            "allow_symbol_change": true,
+            "container_id": "tradingview_widget",
+            "studies": [
+                "MAExp@tv-basicstudies",
+                "RSI@tv-basicstudies"
+            ],
+            "studies_overrides": {
+                "moving average exponential.length": 50,
+                "rsi.length": 14
             }
         });
-    }
-
-    getTimeUnit(): 'minute' | 'hour' | 'day' {
-        switch (this.selectedInterval) {
-            case '1h':
-                return 'minute';
-            case '24h':
-                return 'hour';
-            case '7d':
-            case '30d':
-                return 'day';
-            default:
-                return 'hour';
-        }
     }
 
     closeModal(): void {

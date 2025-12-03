@@ -14,44 +14,44 @@ import { iconSubset } from './icons/icon-subset';
     imports: [RouterOutlet]
 })
 export class AppComponent implements OnInit {
-  title = 'CoreUI Angular Admin Template';
+    title = 'Crypto Tracker Pro';
 
-  readonly #destroyRef: DestroyRef = inject(DestroyRef);
-  readonly #activatedRoute: ActivatedRoute = inject(ActivatedRoute);
-  readonly #router = inject(Router);
-  readonly #titleService = inject(Title);
+    readonly #destroyRef: DestroyRef = inject(DestroyRef);
+    readonly #activatedRoute: ActivatedRoute = inject(ActivatedRoute);
+    readonly #router = inject(Router);
+    readonly #titleService = inject(Title);
 
-  readonly #colorModeService = inject(ColorModeService);
-  readonly #iconSetService = inject(IconSetService);
+    readonly #colorModeService = inject(ColorModeService);
+    readonly #iconSetService = inject(IconSetService);
 
-  constructor() {
-    this.#titleService.setTitle(this.title);
-    // iconSet singleton
-    this.#iconSetService.icons = { ...iconSubset };
-    this.#colorModeService.localStorageItemName.set('coreui-free-angular-admin-template-theme-default');
-    this.#colorModeService.eventName.set('ColorSchemeChange');
-  }
+    constructor() {
+        this.#titleService.setTitle(this.title);
+        // iconSet singleton
+        this.#iconSetService.icons = { ...iconSubset };
+        this.#colorModeService.localStorageItemName.set('coreui-free-angular-admin-template-theme-default');
+        this.#colorModeService.eventName.set('ColorSchemeChange');
+    }
 
-  ngOnInit(): void {
+    ngOnInit(): void {
 
-    this.#router.events.pipe(
-        takeUntilDestroyed(this.#destroyRef)
-      ).subscribe((evt) => {
-      if (!(evt instanceof NavigationEnd)) {
-        return;
-      }
-    });
+        this.#router.events.pipe(
+            takeUntilDestroyed(this.#destroyRef)
+        ).subscribe((evt) => {
+            if (!(evt instanceof NavigationEnd)) {
+                return;
+            }
+        });
 
-    this.#activatedRoute.queryParams
-      .pipe(
-        delay(1),
-        map(params => <string>params['theme']?.match(/^[A-Za-z0-9\s]+/)?.[0]),
-        filter(theme => ['dark', 'light', 'auto'].includes(theme)),
-        tap(theme => {
-          this.#colorModeService.colorMode.set(theme);
-        }),
-        takeUntilDestroyed(this.#destroyRef)
-      )
-      .subscribe();
-  }
+        this.#activatedRoute.queryParams
+            .pipe(
+                delay(1),
+                map(params => <string>params['theme']?.match(/^[A-Za-z0-9\s]+/)?.[0]),
+                filter(theme => ['dark', 'light', 'auto'].includes(theme)),
+                tap(theme => {
+                    this.#colorModeService.colorMode.set(theme);
+                }),
+                takeUntilDestroyed(this.#destroyRef)
+            )
+            .subscribe();
+    }
 }

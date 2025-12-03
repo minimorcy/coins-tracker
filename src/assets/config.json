@@ -45,10 +45,6 @@
             "id": "chainlink"
         },
         {
-            "symbol": "MATICUSDT",
-            "id": "matic-network"
-        },
-        {
             "symbol": "SHIBUSDT",
             "id": "shiba-inu"
         },
@@ -99,10 +95,6 @@
         {
             "symbol": "QNTUSDT",
             "id": "quant-network"
-        },
-        {
-            "symbol": "CROUSDT",
-            "id": "crypto-com-chain"
         },
         {
             "symbol": "ARBUSDT",

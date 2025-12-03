@@ -11,7 +11,7 @@ import { ChartModalComponent } from './chart-modal/chart-modal.component';
 import { CryptoService } from '../../services/crypto.service';
 import { PortfolioService } from '../../services/portfolio.service';
 import { ConfigService } from '../../services/config.service';
-import { MarketService, GlobalData } from '../../services/market.service';
+import { MarketService, GlobalData, FearAndGreedData } from '../../services/market.service';
 import { AlertService, PriceAlert } from '../../services/alert.service';
 import { AnalysisService, TradeSetupResult } from '../../services/analysis.service';
 import { NewsFeedComponent } from './news-feed/news-feed.component';
@@ -56,6 +56,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     public cryptocurrencies: CryptoData[] = [];
     public totalPortfolioValue: number = 0;
     public globalData: GlobalData | null = null;
+    public fearAndGreedIndex: FearAndGreedData | null = null;
 
     // Alert Modal state
     public alertModalVisible: boolean = false;
@@ -135,6 +136,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     fetchGlobalData(): void {
         this.marketService.getGlobalData().subscribe(data => {
             this.globalData = data;
+        });
+        this.marketService.getFearAndGreedIndex().subscribe(data => {
+            this.fearAndGreedIndex = data;
         });
     }
 

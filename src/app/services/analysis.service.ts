@@ -24,6 +24,15 @@ export interface TradeSetupResult {
         ema50: number;
         touched: boolean;
         rsi: number;
+        macd: {
+            histogram: number;
+            signal: number;
+            macd: number;
+        };
+        stochRsi: {
+            k: number;
+            d: number;
+        };
         volume: {
             average: number;
             current: number;
@@ -218,6 +227,66 @@ export class AnalysisService {
         return adxArray;
     }
 
+    calculateMACD(prices: number[], fastPeriod: number = 12, slowPeriod: number = 26, signalPeriod: number = 9): { macd: number[], signal: number[], histogram: number[] } {
+        const fastEMA = this.calculateEMA(prices, fastPeriod);
+        const slowEMA = this.calculateEMA(prices, slowPeriod);
+
+        const macdLine: number[] = [];
+        // Align arrays (slowEMA is shorter)
+        const diff = fastEMA.length - slowEMA.length;
+
+        for (let i = 0; i < slowEMA.length; i++) {
+            macdLine.push(fastEMA[i + diff] - slowEMA[i]);
+        }
+
+        const signalLine = this.calculateEMA(macdLine, signalPeriod);
+        const histogram: number[] = [];
+
+        const signalDiff = macdLine.length - signalLine.length;
+
+        for (let i = 0; i < signalLine.length; i++) {
+            histogram.push(macdLine[i + signalDiff] - signalLine[i]);
+        }
+
+        return { macd: macdLine, signal: signalLine, histogram };
+    }
+
+    calculateStochRSI(rsiValues: number[], period: number = 14, kPeriod: number = 3, dPeriod: number = 3): { k: number[], d: number[] } {
+        if (rsiValues.length < period) return { k: [], d: [] };
+
+        const stochRSI: number[] = [];
+
+        for (let i = period - 1; i < rsiValues.length; i++) {
+            const slice = rsiValues.slice(i - period + 1, i + 1);
+            const min = Math.min(...slice);
+            const max = Math.max(...slice);
+
+            let val = 0;
+            if (max - min !== 0) {
+                val = (rsiValues[i] - min) / (max - min);
+            }
+            stochRSI.push(val * 100);
+        }
+
+        // Calculate K (SMA of StochRSI)
+        const kLine = this.calculateSMA(stochRSI, kPeriod);
+        // Calculate D (SMA of K)
+        const dLine = this.calculateSMA(kLine, dPeriod);
+
+        return { k: kLine, d: dLine };
+    }
+
+    calculateSMA(data: number[], period: number): number[] {
+        const sma: number[] = [];
+        if (data.length < period) return [];
+
+        for (let i = period - 1; i < data.length; i++) {
+            const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+            sma.push(sum / period);
+        }
+        return sma;
+    }
+
     detectPatterns(kline: Kline): string[] {
         const patterns: string[] = [];
         const body = Math.abs(kline.close - kline.open);
@@ -297,7 +366,10 @@ export class AnalysisService {
         const hourlyATR = this.calculateATR(hourlyHighs, hourlyLows, hourlyCloses, 14);
         const hourlyADX = this.calculateADX(hourlyHighs, hourlyLows, hourlyCloses, 14);
 
-        if (dailyEMA50.length < 2 || hourlyEMA50.length < 1 || hourlyRSI.length < 1 || hourlyATR.length < 1 || fourHourEMA50.length < 2) {
+        const hourlyMACD = this.calculateMACD(hourlyCloses);
+        const hourlyStochRSI = this.calculateStochRSI(hourlyRSI);
+
+        if (dailyEMA50.length < 2 || hourlyEMA50.length < 1 || hourlyRSI.length < 1 || hourlyATR.length < 1 || fourHourEMA50.length < 2 || hourlyMACD.histogram.length < 1 || hourlyStochRSI.k.length < 1) {
             return null;
         }
 
@@ -325,15 +397,24 @@ export class AnalysisService {
             trend4h = 'bearish';
         }
 
-        // 3. Check 1h Retracement to EMA50
+        // 3. Check 1h Analysis
         const lastHourlyKline = hourlyKlines[hourlyKlines.length - 1];
         const currentHourlyEMA = hourlyEMA50[hourlyEMA50.length - 1];
         const currentRSI = hourlyRSI[hourlyRSI.length - 1];
         const currentATR = hourlyATR[hourlyATR.length - 1];
         const currentADX = hourlyADX.length > 0 ? hourlyADX[hourlyADX.length - 1] : 0;
 
-        // Touch condition: Low <= EMA <= High
-        const touchedEMA = lastHourlyKline.low <= currentHourlyEMA && lastHourlyKline.high >= currentHourlyEMA;
+        const currentMACDHist = hourlyMACD.histogram[hourlyMACD.histogram.length - 1];
+        const currentMACDVal = hourlyMACD.macd[hourlyMACD.macd.length - 1];
+        const currentSignalVal = hourlyMACD.signal[hourlyMACD.signal.length - 1];
+
+        const currentStochK = hourlyStochRSI.k[hourlyStochRSI.k.length - 1];
+        const currentStochD = hourlyStochRSI.d[hourlyStochRSI.d.length - 1];
+
+        // Touch condition: Low <= EMA <= High OR Price within 1.5% of EMA (Expert: tighter zone)
+        const distToEMA = Math.abs(lastHourlyKline.close - currentHourlyEMA);
+        const threshold = currentHourlyEMA * 0.015;
+        const touchedEMA = (lastHourlyKline.low <= currentHourlyEMA && lastHourlyKline.high >= currentHourlyEMA) || (distToEMA <= threshold);
 
         // Volume Analysis
         const volPeriod = 20;
@@ -352,18 +433,41 @@ export class AnalysisService {
         let stopLoss = 0;
         let takeProfit = 0;
 
-        // Strict Rule: Daily AND 4H must match
+        // EXPERT STRATEGY LOGIC
+        // 1. Trend Alignment: Daily & 4H must be aligned
         const trendsAligned = (trend === 'bullish' && trend4h === 'bullish') || (trend === 'bearish' && trend4h === 'bearish');
 
-        if (trendsAligned && touchedEMA) {
+        if (trendsAligned) {
             if (trend === 'bullish') {
-                state = 'bullish';
-                stopLoss = lastHourlyKline.low - currentATR;
-                takeProfit = lastHourlyKline.close + (2 * (lastHourlyKline.close - stopLoss));
+                // BULLISH SETUP
+                // 1. Price near EMA50 (Value Zone)
+                // 2. StochRSI Oversold (< 20) OR Crossing Up (K > D)
+                // 3. MACD Histogram > 0 OR Rising
+
+                const stochOversold = currentStochK < 25;
+                const stochCrossUp = currentStochK > currentStochD;
+                const macdBullish = currentMACDHist > 0 || (currentMACDHist > hourlyMACD.histogram[hourlyMACD.histogram.length - 2]);
+
+                if (touchedEMA && (stochOversold || stochCrossUp) && macdBullish) {
+                    state = 'bullish';
+                    stopLoss = lastHourlyKline.low - (currentATR * 1.5); // 1.5 ATR Stop
+                    takeProfit = lastHourlyKline.close + (2 * (lastHourlyKline.close - stopLoss)); // 1:2 RR
+                }
             } else {
-                state = 'bearish';
-                stopLoss = lastHourlyKline.high + currentATR;
-                takeProfit = lastHourlyKline.close - (2 * (stopLoss - lastHourlyKline.close));
+                // BEARISH SETUP
+                // 1. Price near EMA50 (Value Zone)
+                // 2. StochRSI Overbought (> 80) OR Crossing Down (K < D)
+                // 3. MACD Histogram < 0 OR Falling
+
+                const stochOverbought = currentStochK > 75;
+                const stochCrossDown = currentStochK < currentStochD;
+                const macdBearish = currentMACDHist < 0 || (currentMACDHist < hourlyMACD.histogram[hourlyMACD.histogram.length - 2]);
+
+                if (touchedEMA && (stochOverbought || stochCrossDown) && macdBearish) {
+                    state = 'bearish';
+                    stopLoss = lastHourlyKline.high + (currentATR * 1.5); // 1.5 ATR Stop
+                    takeProfit = lastHourlyKline.close - (2 * (stopLoss - lastHourlyKline.close)); // 1:2 RR
+                }
             }
         }
 
@@ -382,6 +486,15 @@ export class AnalysisService {
                 ema50: currentHourlyEMA,
                 touched: touchedEMA,
                 rsi: currentRSI,
+                macd: {
+                    histogram: currentMACDHist,
+                    signal: currentSignalVal,
+                    macd: currentMACDVal
+                },
+                stochRsi: {
+                    k: currentStochK,
+                    d: currentStochD
+                },
                 volume: {
                     average: avgVolume,
                     current: currentVolume,
