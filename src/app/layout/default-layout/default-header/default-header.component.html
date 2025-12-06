@@ -1,10 +1,17 @@
 <ng-container>
   <c-container [fluid]="true" class="px-4">
-    <c-header-nav class="ms-auto ms-md-0">
+    <c-header-nav class="ms-auto ms-md-0 d-flex align-items-center gap-2">
+      <c-nav-item>
+        <button cButton color="primary" variant="outline" (click)="toggleGuide()" title="Guía Estrategia">
+          ❓ Guía Estrategia
+        </button>
+      </c-nav-item>
       <ng-container *ngTemplateOutlet="themeDropdown" />
     </c-header-nav>
   </c-container>
 </ng-container>
+
+<app-guide-modal [visible]="guideVisible" (visibleChange)="guideVisible = $event"></app-guide-modal>
 
 <ng-template #themeDropdown>
   <c-dropdown alignment="end" variant="nav-item">

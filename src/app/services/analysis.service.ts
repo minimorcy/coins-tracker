@@ -48,6 +48,21 @@ export interface TradeSetupResult {
         stopLoss: number;
         takeProfit: number;
     };
+    cava: {
+        macdDaily: {
+            histogram: number;
+            signal: number;
+            macd: number;
+        };
+        stochSlow: {
+            k: number;
+            d: number;
+        };
+        rsi2: number;
+        sar: number;
+        setup: boolean;
+        state: 'bullish' | 'bearish' | null;
+    };
 }
 
 @Injectable({
@@ -287,6 +302,84 @@ export class AnalysisService {
         return sma;
     }
 
+    calculateStochastic(highs: number[], lows: number[], closes: number[], period: number = 14, kPeriod: number = 3, dPeriod: number = 3): { k: number[], d: number[] } {
+        if (highs.length < period) return { k: [], d: [] };
+
+        const stochK: number[] = [];
+
+        for (let i = period - 1; i < highs.length; i++) {
+            const highestHigh = Math.max(...highs.slice(i - period + 1, i + 1));
+            const lowestLow = Math.min(...lows.slice(i - period + 1, i + 1));
+            const close = closes[i];
+
+            let k = 0;
+            if (highestHigh - lowestLow !== 0) {
+                k = ((close - lowestLow) / (highestHigh - lowestLow)) * 100;
+            }
+            stochK.push(k);
+        }
+
+        // Smooth K
+        const smoothK = this.calculateSMA(stochK, kPeriod);
+        // Calculate D (SMA of Smooth K)
+        const dLine = this.calculateSMA(smoothK, dPeriod);
+
+        return { k: smoothK, d: dLine };
+    }
+
+    calculateParabolicSAR(highs: number[], lows: number[], acceleration: number = 0.02, maximum: number = 0.2): number[] {
+        if (highs.length < 2) return [];
+
+        const sar: number[] = [];
+        let isLong = true;
+        let af = acceleration;
+        let ep = highs[0];
+        let currentSar = lows[0];
+
+        sar.push(currentSar);
+
+        for (let i = 1; i < highs.length; i++) {
+            const prevSar = sar[i - 1];
+            const high = highs[i];
+            const low = lows[i];
+
+            if (isLong) {
+                currentSar = prevSar + af * (ep - prevSar);
+                currentSar = Math.min(currentSar, lows[i - 1], i > 1 ? lows[i - 2] : lows[i - 1]);
+
+                if (low < currentSar) {
+                    isLong = false;
+                    currentSar = ep;
+                    ep = low;
+                    af = acceleration;
+                } else {
+                    if (high > ep) {
+                        ep = high;
+                        af = Math.min(af + acceleration, maximum);
+                    }
+                }
+            } else {
+                currentSar = prevSar + af * (ep - prevSar);
+                currentSar = Math.max(currentSar, highs[i - 1], i > 1 ? highs[i - 2] : highs[i - 1]);
+
+                if (high > currentSar) {
+                    isLong = true;
+                    currentSar = ep;
+                    ep = high;
+                    af = acceleration;
+                } else {
+                    if (low < ep) {
+                        ep = low;
+                        af = Math.min(af + acceleration, maximum);
+                    }
+                }
+            }
+            sar.push(currentSar);
+        }
+
+        return sar;
+    }
+
     detectPatterns(kline: Kline): string[] {
         const patterns: string[] = [];
         const body = Math.abs(kline.close - kline.open);
@@ -461,13 +554,46 @@ export class AnalysisService {
 
                 const stochOverbought = currentStochK > 75;
                 const stochCrossDown = currentStochK < currentStochD;
-                const macdBearish = currentMACDHist < 0 || (currentMACDHist < hourlyMACD.histogram[hourlyMACD.histogram.length - 2]);
+                const macdBearish = currentMACDHist < 0 || (currentMACDHist > hourlyMACD.histogram[hourlyMACD.histogram.length - 2]);
 
                 if (touchedEMA && (stochOverbought || stochCrossDown) && macdBearish) {
                     state = 'bearish';
                     stopLoss = lastHourlyKline.high + (currentATR * 1.5); // 1.5 ATR Stop
                     takeProfit = lastHourlyKline.close - (2 * (stopLoss - lastHourlyKline.close)); // 1:2 RR
                 }
+            }
+        }
+
+        // CAVA STRATEGY LOGIC
+        const dailyMACD = this.calculateMACD(dailyCloses);
+        const hourlyStochSlow = this.calculateStochastic(hourlyHighs, hourlyLows, hourlyCloses, 50, 3, 3);
+        const hourlyRSI2 = this.calculateRSI(hourlyCloses, 2);
+        const hourlySAR = this.calculateParabolicSAR(hourlyHighs, hourlyLows);
+
+        let cavaSetup = false;
+        let cavaState: 'bullish' | 'bearish' | null = null;
+
+        if (dailyMACD.macd.length > 0 && hourlyStochSlow.k.length > 0 && hourlyRSI2.length > 0) {
+            const currDailyMACD = dailyMACD.macd[dailyMACD.macd.length - 1];
+            const currDailySignal = dailyMACD.signal[dailyMACD.signal.length - 1];
+            const currStochSlowK = hourlyStochSlow.k[hourlyStochSlow.k.length - 1];
+            const currRSI2 = hourlyRSI2[hourlyRSI2.length - 1];
+
+            // Cava Bullish:
+            // 1. Daily MACD Bullish (MACD > Signal)
+            // 2. Hourly Stoch(50) > 80 (Strong Trend)
+            // 3. Hourly RSI(2) < 10 (Oversold Entry)
+            if (currDailyMACD > currDailySignal && currStochSlowK > 80 && currRSI2 < 10) {
+                cavaSetup = true;
+                cavaState = 'bullish';
+            }
+            // Cava Bearish:
+            // 1. Daily MACD Bearish (MACD < Signal)
+            // 2. Hourly Stoch(50) < 20 (Strong Trend)
+            // 3. Hourly RSI(2) > 90 (Overbought Entry)
+            else if (currDailyMACD < currDailySignal && currStochSlowK < 20 && currRSI2 > 90) {
+                cavaSetup = true;
+                cavaState = 'bearish';
             }
         }
 
@@ -509,6 +635,21 @@ export class AnalysisService {
                 divergence: divergence,
                 stopLoss: stopLoss,
                 takeProfit: takeProfit
+            },
+            cava: {
+                macdDaily: {
+                    histogram: dailyMACD.histogram[dailyMACD.histogram.length - 1] || 0,
+                    signal: dailyMACD.signal[dailyMACD.signal.length - 1] || 0,
+                    macd: dailyMACD.macd[dailyMACD.macd.length - 1] || 0
+                },
+                stochSlow: {
+                    k: hourlyStochSlow.k.length > 0 ? hourlyStochSlow.k[hourlyStochSlow.k.length - 1] : 0,
+                    d: hourlyStochSlow.d.length > 0 ? hourlyStochSlow.d[hourlyStochSlow.d.length - 1] : 0
+                },
+                rsi2: hourlyRSI2.length > 0 ? hourlyRSI2[hourlyRSI2.length - 1] : 0,
+                sar: hourlySAR.length > 0 ? hourlySAR[hourlySAR.length - 1] : 0,
+                setup: cavaSetup,
+                state: cavaState
             }
         };
     }

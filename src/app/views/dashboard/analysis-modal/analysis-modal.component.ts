@@ -13,8 +13,7 @@ import { TradeSetupResult } from '../../../services/analysis.service';
     imports: [
         CommonModule, ModalComponent, ModalHeaderComponent, ModalBodyComponent,
         ModalFooterComponent, ModalTitleDirective, ButtonDirective,
-        CardComponent, CardBodyComponent, RowComponent, ColComponent,
-        AccordionModule
+        CardComponent, CardBodyComponent, RowComponent, ColComponent
     ],
     templateUrl: './analysis-modal.component.html',
     styleUrls: ['./analysis-modal.component.scss']
@@ -28,6 +27,12 @@ export class AnalysisModalComponent {
     handleVisibleChange(event: boolean) {
         this.visible = event;
         this.visibleChange.emit(event);
+    }
+
+    accordionVisible = false;
+
+    toggleAccordion() {
+        this.accordionVisible = !this.accordionVisible;
     }
 
     getTrendIcon(trend: string): string {

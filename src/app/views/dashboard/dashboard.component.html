@@ -121,7 +121,7 @@
                 </div>
               </td>
               <td class="text-center">
-                <span class="badge cursor-pointer" 
+                <span class="badge cursor-pointer me-1" 
                       (click)="openAnalysisModal(crypto, $event)"
                       [ngClass]="{
                         'bg-success': crypto.tradeSetup?.state === 'bullish', 
@@ -133,6 +133,15 @@
                   <span *ngIf="crypto.tradeSetup?.state && crypto.tradeSetup?.hourly?.touched" class="ms-1 fw-bold text-white">
                     {{ crypto.tradeSetup!.hourly.price > crypto.tradeSetup!.hourly.ema50 ? '↑' : '↓' }}
                   </span>
+                </span>
+                
+                <!-- Cava Indicator -->
+                <span *ngIf="crypto.tradeSetup?.cava?.setup" 
+                      class="badge bg-purple cursor-pointer" 
+                      style="background-color: #6f42c1;"
+                      (click)="openAnalysisModal(crypto, $event)"
+                      title="Cava Strategy Setup Detected!">
+                  🧠 {{ crypto.tradeSetup?.cava?.state | uppercase }}
                 </span>
               </td>
               <td class="fw-semibold">{{ crypto.lastPrice | currency }}</td>
